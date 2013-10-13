@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Adam Tuttle</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="description" content="">
+		<meta name="author" content="">
+		<link rel="stylesheet" href="assets/css/bundle.css" />
+	</head>
+
+	<body>
+		<div id="parallax">
+			<img src="assets/img/bg.jpg" />
+			<div class="parallaxGradient"></div>
+		</div>
+		<div class="container">
+			<div class="row">
+				<div class="col-md-6 col-md-offset-1">
+					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+						<i class="icon-reorder"></i>
+					</button>
+					<img src="http://fusiongrokker.com/skins/FG8/assets/img/headshot-medium.png" class="pull-left avatar" width="60px" height="60px" />
+					<h2 class="title">Adam Tuttle</h2>
+				</div>
+				<div class="col-md-4">
+					<form id="searchform" class="form-inline pull-right" action="http://google.com/search" method="get">
+						<label class="sr-only" for="searchbox">Search FusionGrokker.com</label>
+						<input type="text" name="q" id="searchbox" placeholder="Search FusionGrokker.com" class="input-lg" style="width:300px" />
+						<input type="hidden" name="q" value="site:fusiongrokker.com" />
+						<button type="submit" class="btn btn-success"><i class="icon-search"></i></button>
+					</form>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-2 col-md-offset-1" id="sidebar">
+					<ul class="nav collapse navbar-collapse">
+						<li><a href="/">Home</a></li>
+						<li><a href="/page/about-me">About Me</a></li>
+						<li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Projects <span class="caret"></span></a>
+							<ul class="dropdown-menu">
+								<li><a href="https://github.com/atuttle/taffy">Taffy</a></li>
+								<li><a href="https://github.com/cfcommunity/Ramen">Ramen</a></li>
+								<li><a href="https://github.com/cfcommunity/CFScript-Community-Components">CFScript Community Components</a></li>
+								<li><a href="/page/projects">Mango Plugins &amp; More</a></li>
+								<li><a href="https://github.com/atuttle/">GitHub</a></li>
+							</ul>
+						</li>
+						<li><a href="/page/presentations">Presentations</a></li>
+						<li><a href="/page/contact-me">Contact Me</a></li>
+						<li><a href="/page/archives">Blog Archives</a></li>
+					</ul>
+					<hr />
+				</div>
+				<div class="col-md-8" id="content">
+					<div class="post" id="post-6005E577-C9F5-58EA-DCE656CF30DB7090">
+					<h1><a href="/post/automating-phonegap-build-with-apache-ant" rel="bookmark" title="Permanent link to: Automating PhoneGap Build with Apache ANT">Automating PhoneGap Build with Apache ANT</a></h1>
+					<blockquote>
+  <p>Disclaimer: <a href="http://www.google.com">What I'm about to show you</a> is my automation as evolved up to and including working with PhoneGap (PG) 2.9. This is derived from a PG2.9 project that was started just a week or two before the release of PG3 and the CLI for building locally or remotely, via the command line. <strong>This changes everything.</strong> I'm sure I'll be completely re-vamping this script when this app gets upgraded to PG3 or for my next app, which will start with the latest stable PG3.x...</p>
+
+  <p>That said, I figured some people might still find it interesting and useful, so I'll share what I've been using daily for the last month or two.</p>
+</blockquote>
+
+<hr/>
+
+<h3>Workflow</h3>
+
+<p>Before we get into the automation stuff, let's talk a little bit about my workflow. Our apps are closed source, which means we don't host them on GitHub (we do use git, however...), which means we post new builds by uploading zip files. While it should be possible to automate the key-unlocking and zip file upload steps using PhoneGap Build (PGB)'s <a href="https://build.phonegap.com/docs/api">API</a>, the amount of time I've had to play with it hasn't been enough to get it working. So what I'm automating is creation of the zip file, plus a few odds and ends that make the process as smooth as possible. Then I manually do the 3-4 clicks necessary to upload the zip file. Room for improvement. :)</p>
+
+<p>You'll need a working knowledge of <a href="http://ant.apache.org/">Apache ANT</a> to follow along.</p>
+
+<p>Also, before we start, I have to give a tip of my hat to <a href="https://twitter.com/nmische">Nathan Mische</a> who set my interest in automation with ANT into motion many years ago, and showed me more than a few of the cool tricks I'm about to share with you.</p>
+
+<h3>Zip Creation</h3>
+
+<p>Zip creation isn't that hard, right? You just compress the whole folder and you're done. Well, yes and no. Yes, but depending on your project organization, that might end up including things like the spec document, hi-resolution PSD graphics files, and other junk that you really don't want inside the final binary file. File size when using PGB can already be <a href="http://fusiongrokker.com/post/phonegap-devs-how-do-you-keep-file-size-down">a little bit of a concern</a>, so don't weigh yourself down with files you're not even using!</p>
+
+<p>First things first, we need a build-temp folder into which we can copy only the files we want to include in our final zip. This could be inside your project, or elsewhere, it doesn't really matter. I'm in the habit of keeping it inside the project folder just so everything's neat and tidy if something misfires and I need to dig into the process. We also need a folder into which we'll put our created zip file(s).</p>
+
+<pre class="prettyprint"><span class="tag">&lt;project</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"your_app"</span><span class="pln"> </span><span class="atn">basedir</span><span class="pun">=</span><span class="atv">"."</span><span class="tag">&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"dir.pkg.tmp"</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${basedir}/build_temp"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+    </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"dir.pkg.bin"</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${basedir}/builds"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+
+</span><span class="tag">&lt;/project&gt;</span></pre>
+
+<p>I like to start with a high-level target and start thinking about the tasks it will need to depend on. We know we want to package our project by default, so let's create a <code class="prettyprint"><span class="kwd">package</span></code> target and make it the default:</p>
+
+<pre class="prettyprint"><span class="tag">&lt;project</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"your_app"</span><span class="pln"> </span><span class="atn">default</span><span class="pun">=</span><span class="atv">"package"</span><span class="pln"> </span><span class="atn">basedir</span><span class="pun">=</span><span class="atv">"."</span><span class="tag">&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"dir.pkg.tmp"</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${basedir}/build_temp"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+    </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"dir.pkg.bin"</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${basedir}/builds"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;target</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"package"</span><span class="tag">&gt;&lt;/target&gt;</span><span class="pln">
+
+</span><span class="tag">&lt;/project&gt;</span></pre>
+
+<p>Before we can create our zip file, we're going to need to make sure the temp directory was cleaned out and re-populated with the latest source code, so let's add a <code class="prettyprint"><span class="pln">prepare</span></code> target and make package depend on it. This way, when we initiate package, prepare is automatically run first:</p>
+
+<pre class="prettyprint"><span class="tag">&lt;project</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"your_app"</span><span class="pln"> </span><span class="atn">default</span><span class="pun">=</span><span class="atv">"package"</span><span class="pln"> </span><span class="atn">basedir</span><span class="pun">=</span><span class="atv">"."</span><span class="tag">&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"dir.pkg.tmp"</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${basedir}/build_temp"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+    </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"dir.pkg.bin"</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${basedir}/builds"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;target</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"package"</span><span class="pln"> </span><span class="atn">depends</span><span class="pun">=</span><span class="atv">"prepare"</span><span class="tag">&gt;&lt;/target&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;target</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"prepare"</span><span class="tag">&gt;&lt;/target&gt;</span><span class="pln">
+
+</span><span class="tag">&lt;/project&gt;</span></pre>
+
+<h3>Preparing for ZIP Creation</h3>
+
+<p>Now we want our <code class="prettyprint"><span class="pln">prepare</span></code> target to clean out that build directory (if there's anything there from last time) and re-populate it:</p>
+
+<pre class="prettyprint"><span class="tag">&lt;project</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"your_app"</span><span class="pln"> </span><span class="atn">default</span><span class="pun">=</span><span class="atv">"package"</span><span class="pln"> </span><span class="atn">basedir</span><span class="pun">=</span><span class="atv">"."</span><span class="tag">&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"dir.pkg.tmp"</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${basedir}/build_temp"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+    </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"dir.pkg.bin"</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${basedir}/builds"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+    </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"dir.src"</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${basedir}/src/mobile"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;target</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"package"</span><span class="pln"> </span><span class="atn">depends</span><span class="pun">=</span><span class="atv">"prepare"</span><span class="tag">&gt;&lt;/target&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;target</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"prepare"</span><span class="tag">&gt;</span><span class="pln">
+
+        </span><span class="tag">&lt;delete</span><span class="pln"> </span><span class="atn">includeemptydirs</span><span class="pun">=</span><span class="atv">"true"</span><span class="pln"> </span><span class="atn">verbose</span><span class="pun">=</span><span class="atv">"false"</span><span class="tag">&gt;</span><span class="pln">
+            </span><span class="tag">&lt;fileset</span><span class="pln"> </span><span class="atn">dir</span><span class="pun">=</span><span class="atv">"${dir.pkg.tmp}"</span><span class="pln"> </span><span class="atn">includes</span><span class="pun">=</span><span class="atv">"**/*"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+        </span><span class="tag">&lt;/delete&gt;</span><span class="pln">
+
+        </span><span class="tag">&lt;copy</span><span class="pln"> </span><span class="atn">todir</span><span class="pun">=</span><span class="atv">"${dir.pkg.tmp}"</span><span class="pln"> </span><span class="atn">verbose</span><span class="pun">=</span><span class="atv">"false"</span><span class="pln"> </span><span class="atn">overwrite</span><span class="pun">=</span><span class="atv">"true"</span><span class="tag">&gt;</span><span class="pln">
+            </span><span class="tag">&lt;fileset</span><span class="pln"> </span><span class="atn">dir</span><span class="pun">=</span><span class="atv">"${dir.src}"</span><span class="pln"> </span><span class="atn">includes</span><span class="pun">=</span><span class="atv">"**/*"</span><span class="tag">&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"build_temp/**"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"builds/**"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">".git"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">".gitignore"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"**/*.psd"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"build.xml"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"*.properties"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"assets/less/**"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"assets/handlebars/**"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+
+                </span><span class="com">&lt;!-- excluded because I generate minified versions &amp; use those instead --&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"assets/js/handlebars.runtime.js"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"assets/js/iscroll.js"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+                </span><span class="tag">&lt;exclude</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"assets/js/jquery.mobile.iscrollview.js"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+            </span><span class="tag">&lt;/fileset&gt;</span><span class="pln">
+        </span><span class="tag">&lt;/copy&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;/target&gt;</span><span class="pln">
+
+</span><span class="tag">&lt;/project&gt;</span></pre>
+
+<p>The delete task should be straight forward. The copy task is copying the contents of our mobile source directory, newly defined as <code class="prettyprint"><span class="pln">dir</span><span class="pun">.</span><span class="pln">src</span></code> and copying <em>most</em> of it into the temp folder. It's excluding:</p>
+
+<ul>
+<li>The <code class="prettyprint"><span class="pln">build_temp</span></code> folder (duh)</li>
+<li>The  <code class="prettyprint"><span class="pln">builds</span></code> folder (duh)</li>
+<li>The git repo and <code class="prettyprint"><span class="pun">.</span><span class="pln">gitignore</span></code> file</li>
+<li>Any PSD's anywhere in the repo</li>
+<li><code class="prettyprint"><span class="pln">build</span><span class="pun">.</span><span class="pln">xml</span></code> (itself...)</li>
+<li><code class="prettyprint"><span class="pun">*.</span><span class="pln">properties</span></code> - properties files used by the build script (more on these in a minute)</li>
+<li>LESS CSS files (compiled into CSS in real time by <a href="http://incident57.com/codekit/">CodeKit</a> while I work)</li>
+<li>Handlebars.js templates (we'll be automating their pre-compile later, as well)</li>
+<li>And a small set of JavaScript libraries for which I keep on-hand the un-minified source for debugging purposes, but which are minified and compressed for production, so we don't need the unminified source in the binary.</li>
+</ul>
+
+<p>Next let's talk about those properties files.</p>
+
+<h3>Properties Files</h3>
+
+<p>ANT has some tags that make working with properties files pretty useful. I use them for a few primary reasons:</p>
+
+<ul>
+<li>To keep frequently changing values out of the repo. We need to store the current build number somewhere, so that gets its own properties file.</li>
+<li>To keep passwords and API Keys out of the repo</li>
+<li>To keep environment-specific configuration out of the repo</li>
+</ul>
+
+<p>For this reason, I have 3 <code class="prettyprint"><span class="pun">.</span><span class="pln">properties</span></code> files for this project. <code class="prettyprint"><span class="pln">build</span><span class="pun">.</span><span class="pln">properties</span></code> holds the current build number:</p>
+
+<pre class="prettyprint"><span class="com">#Fri, 16 Aug 2013 19:42:30 -0400</span><span class="pln">
+version</span><span class="pun">.</span><span class="pln">build</span><span class="pun">.</span><span class="pln">number</span><span class="pun">=</span><span class="lit">252</span></pre>
+
+<p>We can read the current value from this file with this ANT task:</p>
+
+<pre class="prettyprint"><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">file</span><span class="pun">=</span><span class="atv">"build.properties"</span><span class="tag">/&gt;</span></pre>
+
+<p>But before we do that, in most cases, we want to increment the build number. Every time I run <code class="prettyprint"><span class="pln">ant </span><span class="kwd">package</span></code>, I want to increase the build number by 1:</p>
+
+<pre class="prettyprint"><span class="tag">&lt;target</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"package"</span><span class="pln"> </span><span class="atn">depends</span><span class="pun">=</span><span class="atv">"prepare"</span><span class="tag">&gt;&lt;/target&gt;</span><span class="pln">
+
+</span><span class="tag">&lt;target</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"prepare"</span><span class="tag">&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;propertyfile</span><span class="pln"> </span><span class="atn">file</span><span class="pun">=</span><span class="atv">"build.properties"</span><span class="tag">&gt;</span><span class="pln">
+        </span><span class="tag">&lt;entry</span><span class="pln"> </span><span class="atn">key</span><span class="pun">=</span><span class="atv">"version.build.number"</span><span class="pln"> </span><span class="atn">type</span><span class="pun">=</span><span class="atv">"int"</span><span class="pln"> </span><span class="atn">operation</span><span class="pun">=</span><span class="atv">"+"</span><span class="pln"> </span><span class="atn">default</span><span class="pun">=</span><span class="atv">"1"</span><span class="tag">/&gt;</span><span class="pln">
+    </span><span class="tag">&lt;/propertyfile&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">file</span><span class="pun">=</span><span class="atv">"build.properties"</span><span class="tag">/&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;delete</span><span class="pln"> </span><span class="atn">includeemptydirs</span><span class="pun">=</span><span class="atv">"true"</span><span class="pln"> </span><span class="atn">verbose</span><span class="pun">=</span><span class="atv">"false"</span><span class="tag">&gt;</span><span class="pln">
+        </span><span class="tag">&lt;fileset</span><span class="pln"> </span><span class="atn">dir</span><span class="pun">=</span><span class="atv">"${dir.pkg.tmp}"</span><span class="pln"> </span><span class="atn">includes</span><span class="pun">=</span><span class="atv">"**/*"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+    </span><span class="tag">&lt;/delete&gt;</span><span class="pln">
+
+</span><span class="tag">&lt;/target&gt;</span></pre>
+
+<p>We're not <em>using</em> the build number in the prepare step yet, but we're going to soon, so we want it available.</p>
+
+<p>Going back to the <code class="prettyprint"><span class="pln">build_temp</span></code> and <code class="prettyprint"><span class="pln">builds</span></code> folders -- I may like them in my project folder, but someone else on my team might like them elsewhere. Let's move those out to a <code class="prettyprint"><span class="kwd">local</span><span class="pun">.</span><span class="pln">properties</span></code> file, along with a few new settings:</p>
+
+<pre class="prettyprint"><span class="com">#Wed, 14 Nov 2012 12:36:48 -0500</span><span class="pln">
+dir</span><span class="pun">.</span><span class="pln">pkg</span><span class="pun">.</span><span class="pln">tmp</span><span class="pun">=./</span><span class="pln">build_temp</span><span class="pun">/</span><span class="pln">
+dir</span><span class="pun">.</span><span class="pln">pkg</span><span class="pun">.</span><span class="pln">bin</span><span class="pun">=./</span><span class="pln">builds</span><span class="pun">/</span><span class="pln">
+phonegap</span><span class="pun">.</span><span class="pln">version</span><span class="pun">=</span><span class="lit">2.9</span><span class="pun">.</span><span class="lit">0</span><span class="pln">
+api</span><span class="pun">.</span><span class="pln">baseurl</span><span class="pun">=</span><span class="pln">https</span><span class="pun">:</span><span class="com">//our-domain.com/api/v1/index.cfm</span></pre>
+
+<p>Now, in addition to their custom temp and bin folders, each developer can independently change the version of PG they want to build against and the location of the API. Maybe they want to point at their local environment, or QA, or production. Every developer can have their own settings.</p>
+
+<p>If you're scratching your head and wondering how an <code class="prettyprint"><span class="pln">api</span><span class="pun">.</span><span class="pln">baseurl</span></code> property causes your compiled app to use a different API location, hang in there. I'll be covering that next; but first let's get the last properties file out of the way.</p>
+
+<p>Lastly I have a <code class="prettyprint"><span class="pln">secrets</span><span class="pun">.</span><span class="pln">properties</span></code> file that contains things like Twitter OAuth consumer keys and secrets, Google API Keys, and so forth. If this file gets committed -- firstly, the committer is violently shamed -- but then they are made to update every value in it. It's both good and bad: It's a great thing that we have all of the secrets in one place, making it easy to change them, but it's a pain in the neck to do it for every involved service. My most recent app integrates with LinkedIn, Twitter, Facebook, and Google Maps, so I've got all of these values saved in <code class="prettyprint"><span class="pln">secrets</span><span class="pun">.</span><span class="pln">properties</span></code>:</p>
+
+<pre class="prettyprint"><span class="com">#Wed, 14 Nov 2012 12:36:48 -0500</span><span class="pln">
+fb</span><span class="pun">.</span><span class="pln">appid</span><span class="pun">=</span><span class="pln">
+fb</span><span class="pun">.</span><span class="pln">appsecret</span><span class="pun">=</span><span class="pln">
+fb</span><span class="pun">.</span><span class="pln">appname</span><span class="pun">=</span><span class="pln">
+
+twitter</span><span class="pun">.</span><span class="pln">consumer</span><span class="pun">.</span><span class="pln">key</span><span class="pun">=</span><span class="pln">
+twitter</span><span class="pun">.</span><span class="pln">consumer</span><span class="pun">.</span><span class="pln">secret</span><span class="pun">=</span><span class="pln">
+twitter</span><span class="pun">.</span><span class="pln">oauth</span><span class="pun">.</span><span class="pln">callback</span><span class="pun">=</span><span class="pln">
+
+google</span><span class="pun">.</span><span class="pln">apikey</span><span class="pun">=</span><span class="pln">
+
+linkedin</span><span class="pun">.</span><span class="pln">apikey</span><span class="pun">=</span><span class="pln">
+linkedin</span><span class="pun">.</span><span class="pln">secret</span><span class="pun">=</span><span class="pln">
+linkedin</span><span class="pun">.</span><span class="pln">oauth</span><span class="pun">.</span><span class="pln">callback</span><span class="pun">=</span></pre>
+
+<p>And of course, all 3 of these files are in <code class="prettyprint"><span class="pun">.</span><span class="pln">gitignore</span></code> so that they don't <em>accidentally</em> end up in the repo. These files must be manually shared with other team members initially, and we just keep them in the root of the project. Use a thumb drive/etc - don't email them!</p>
+
+<h3>Filtering</h3>
+
+<p>So how exactly do we push the value of the ant property <code class="prettyprint"><span class="pln">api</span><span class="pun">.</span><span class="pln">baseurl</span></code> into our JavaScript code? Filtering.</p>
+
+<p>First, we need to read in all of the necessary properties files, then we set up filter tokens:</p>
+
+<pre class="prettyprint"><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">file</span><span class="pun">=</span><span class="atv">"build.properties"</span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">file</span><span class="pun">=</span><span class="atv">"local.properties"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">file</span><span class="pun">=</span><span class="atv">"secrets.properties"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"API_BASE"</span><span class="pln">                  </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${api.baseurl}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"BUILD_NUMBER"</span><span class="pln">              </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${version.build.number}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"VERSION_MAJOR"</span><span class="pln">             </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${version.major}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"VERSION_MINOR"</span><span class="pln">             </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${version.minor}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"PHONEGAP_VERSION"</span><span class="pln">          </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${phonegap.version}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"GOOGLE_MAPS_API_KEY"</span><span class="pln">       </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${google.apikey}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"LINKEDIN_CONSUMER_KEY"</span><span class="pln">     </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${linkedin.apikey}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"LINKEDIN_CONSUMER_SECRET"</span><span class="pln">  </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${linkedin.secret}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"LINKEDIN_OAUTH_CALLBACK"</span><span class="pln">   </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${linkedin.oauth.callback}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"TWITTER_CONSUMER_KEY"</span><span class="pln">      </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${twitter.consumer.key}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"TWITTER_CONSUMER_SECRET"</span><span class="pln">   </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${twitter.consumer.secret}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"TWITTER_OAUTH_CALLBACK"</span><span class="pln">    </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${twitter.oauth.callback}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"FB_APP_ID"</span><span class="pln">                 </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${fb.appid}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+</span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"FB_APP_NAME"</span><span class="pln">               </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${fb.appname}"</span><span class="pln"> </span><span class="tag">/&gt;</span></pre>
+
+<p>Remember that <code class="prettyprint"><span class="pln">copy</span></code> task we ran? Add a <code class="prettyprint"><span class="pln">filtering</span><span class="pun">=</span><span class="str">"true"</span></code> attribute to it, and now all of the files that are copied are checked for <em>tokens</em>, and when a token is found, it's replaced with the associated property value.</p>
+
+<p><em>Tokens</em> are defined in your source like this: <code class="prettyprint"><span class="lit">@TOKEN_NAME@</span></code></p>
+
+<p>So, in my <code class="prettyprint"><span class="pln">app</span><span class="pun">.</span><span class="pln">js</span></code> file, right at the top, I've got this code:</p>
+
+<pre class="prettyprint"><span class="pun">;</span><span class="pln">window</span><span class="pun">.</span><span class="pln">app </span><span class="pun">=</span><span class="pln"> </span><span class="pun">(</span><span class="kwd">function</span><span class="pun">(){</span><span class="pln">
+
+    </span><span class="com">//tokens replaced by ant build script</span><span class="pln">
+    </span><span class="kwd">var</span><span class="pln"> fbAppId </span><span class="pun">=</span><span class="pln"> </span><span class="str">'@FB_APP_ID@'</span><span class="pun">;</span><span class="pln">
+    </span><span class="kwd">var</span><span class="pln"> twitterConsumerKey </span><span class="pun">=</span><span class="pln"> </span><span class="str">'@TWITTER_CONSUMER_KEY@'</span><span class="pun">;</span><span class="pln">
+    </span><span class="kwd">var</span><span class="pln"> twitterConsumerSecret </span><span class="pun">=</span><span class="pln"> </span><span class="str">'@TWITTER_CONSUMER_SECRET@'</span><span class="pun">;</span><span class="pln">
+    </span><span class="kwd">var</span><span class="pln"> twitterOauthCallback </span><span class="pun">=</span><span class="pln"> </span><span class="str">'@TWITTER_OAUTH_CALLBACK@'</span><span class="pun">;</span><span class="pln">
+    </span><span class="kwd">var</span><span class="pln"> linkedInOauthCallback </span><span class="pun">=</span><span class="pln"> </span><span class="str">'@LINKEDIN_OAUTH_CALLBACK@'</span><span class="pun">;</span><span class="pln">
+    </span><span class="kwd">var</span><span class="pln"> linkedInConsumerKey </span><span class="pun">=</span><span class="pln"> </span><span class="str">'@LINKEDIN_CONSUMER_KEY@'</span><span class="pun">;</span><span class="pln">
+    </span><span class="kwd">var</span><span class="pln"> linkedInConsumerSecret </span><span class="pun">=</span><span class="pln"> </span><span class="str">'@LINKEDIN_CONSUMER_SECRET@'</span><span class="pun">;</span><span class="pln">
+    </span><span class="kwd">var</span><span class="pln"> appVersion </span><span class="pun">=</span><span class="pln"> </span><span class="str">'@VERSION_MAJOR@.@VERSION_MINOR@.@BUILD_NUMBER@'</span><span class="pun">;</span><span class="pln">
+
+    </span><span class="com">//...</span><span class="pln">
+</span><span class="pun">})();</span></pre>
+
+<p>Once the <code class="prettyprint"><span class="pln">copy</span></code> task is complete (and it's actually rather fast, even with the filtering enabled), all of those tokens have been replaced in the copies of the original files. The original files are left untouched. <strong>This is why we copy them to a temp folder instead of just zipping straight out of the source folder.</strong></p>
+
+<p>You can use this to replace tokens in more than just your source code, too. I also use it to inject token values directly into my HTML, as well as my PGB <code class="prettyprint"><span class="pln">config</span><span class="pun">.</span><span class="pln">xml</span></code>. In particular, I include <code class="prettyprint"><span class="pln">version</span><span class="pun">.</span><span class="pln">major</span></code>, <code class="prettyprint"><span class="pln">version</span><span class="pun">.</span><span class="pln">minor</span></code>, and <code class="prettyprint"><span class="pln">version</span><span class="pun">.</span><span class="pln">build</span></code> as my version number, and I also fill in the PG version:</p>
+
+<pre class="prettyprint"><span class="tag">&lt;widget</span><span class="pln"> </span><span class="atn">xmlns</span><span class="pln">   </span><span class="pun">=</span><span class="pln"> </span><span class="atv">"http://www.w3.org/ns/widgets"</span><span class="pln">
+    </span><span class="atn">xmlns:gap</span><span class="pln">   </span><span class="pun">=</span><span class="pln"> </span><span class="atv">"http://phonegap.com/ns/1.0"</span><span class="pln">
+    </span><span class="atn">id</span><span class="pln">          </span><span class="pun">=</span><span class="pln"> </span><span class="atv">"com.fusiongrokker.example"</span><span class="pln">
+    </span><span class="atn">versionCode</span><span class="pln"> </span><span class="pun">=</span><span class="pln"> </span><span class="atv">"@BUILD_NUMBER@"</span><span class="pln">
+    </span><span class="atn">version</span><span class="pln">     </span><span class="pun">=</span><span class="pln"> </span><span class="atv">"@VERSION_MAJOR@.@VERSION_MINOR@.@BUILD_NUMBER@"</span><span class="tag">&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;preference</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"phonegap-version"</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"@PHONEGAP_VERSION@"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+
+</span><span class="tag">&lt;/widget&gt;</span></pre>
+
+<p>This is how twiddling those little properties files can have full control over compiled binaries after all is said and done.</p>
+
+<h3>Pre-Compiling Other Assets</h3>
+
+<p>Let's take this another step further, shall we? Here I'll show you how I pre-compile my <a href="http://handlebarsjs.com/">Handlebars.js</a> templates, but the same principles could be applied to anything that you want to pre-process before packaging. You might have image optimization tools, JS and CSS concatentation, minification, and compression, or myriad other jobs.</p>
+
+<blockquote>
+  <p><strong>Aside:</strong> I've found that while using compressed JS libraries can save marginal space, compressing my application code is usually not worth the effort. I do a lot of on-device debugging and having the code minified makes that <em>SO</em> much harder. Unless your app code is approaching a half meg, I wouldn't worry about it, personally.</p>
+</blockquote>
+
+<p>If you're not familiar with Handlebars pre-compiling and you want to be, I'd recommend you <a href="http://www.youtube.com/watch?v=ehP1vMq_BX8">watch this video</a> (only three minutes long). The <strong>tl;dr</strong> is: Compiling is the most CPU-intensive part of Handlebars templates, and converts each text template into a JS function that takes the expected data as input and returns a string (the data-interpolated-template). Pre-compiling creates those JS functions up front so that the browser (or in this case, phone/tablet) doesn't have to do that at runtime.</p>
+
+<p>If you'll recall, I have a folder in my project named <code class="prettyprint"><span class="pln">assets</span><span class="pun">/</span><span class="pln">handlebars</span></code>, and this is where I store all of my <code class="prettyprint"><span class="pln">foo</span><span class="pun">.</span><span class="pln">handlebars</span></code> template files. One really nice thing about the handlebars CLI tool is that you can pass it a folder location and it will compile all of the templates it finds in that folder and safely concatenate them all back into one file of functions.</p>
+
+<p>Essentially, what we want our pre-compilation step to do is run this command line argument:</p>
+
+<pre class="prettyprint"><span class="pln">handlebars </span><span class="pun">--</span><span class="pln">min assets</span><span class="pun">/</span><span class="pln">handlebars </span><span class="pun">&gt;</span><span class="pln"> assets</span><span class="pun">/</span><span class="pln">js</span><span class="pun">/</span><span class="pln">templates</span><span class="pun">.</span><span class="pln">min</span><span class="pun">.</span><span class="pln">js</span></pre>
+
+<p>Obviously, there's no <code class="prettyprint"><span class="pln">handlebars</span></code> task built into ANT to do this for us, so we'll have to create it with my recent favorite ANT task, <a href="http://ant.apache.org/manual/Tasks/macrodef.html">Macrodef</a>. We'll just append this task to our <code class="prettyprint"><span class="pln">build</span><span class="pun">.</span><span class="pln">xml</span></code> file, inside the <code class="prettyprint"><span class="tag">&lt;project&gt;&lt;/project&gt;</span></code> tags, but outside of any targets.</p>
+
+<pre class="prettyprint"><span class="tag">&lt;project</span><span class="pln">...</span><span class="tag">&gt;</span><span class="pln">
+
+    </span><span class="com">&lt;!-- other stuff we've already discussed goes here --&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;macrodef</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"handlebars"</span><span class="tag">&gt;</span><span class="pln">
+        </span><span class="tag">&lt;attribute</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"dir"</span><span class="pln"> </span><span class="atn">default</span><span class="pun">=</span><span class="atv">""</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+        </span><span class="tag">&lt;attribute</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"outfile"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+        </span><span class="tag">&lt;element</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"args"</span><span class="pln"> </span><span class="atn">optional</span><span class="pun">=</span><span class="atv">"true"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+        </span><span class="tag">&lt;sequential&gt;</span><span class="pln">
+            </span><span class="tag">&lt;exec</span><span class="pln"> </span><span class="atn">executable</span><span class="pun">=</span><span class="atv">"handlebars"</span><span class="pln">
+                </span><span class="atn">dir</span><span class="pun">=</span><span class="atv">"@{dir}"</span><span class="pln">
+                </span><span class="atn">output</span><span class="pun">=</span><span class="atv">"@{outfile}"</span><span class="pln">
+                </span><span class="atn">logError</span><span class="pun">=</span><span class="atv">"true"</span><span class="pln">
+                </span><span class="atn">failonerror</span><span class="pun">=</span><span class="atv">"true"</span><span class="tag">&gt;</span><span class="pln">
+                    </span><span class="tag">&lt;args</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+            </span><span class="tag">&lt;/exec&gt;</span><span class="pln">
+        </span><span class="tag">&lt;/sequential&gt;</span><span class="pln">
+    </span><span class="tag">&lt;/macrodef&gt;</span><span class="pln">
+
+</span><span class="tag">&lt;/project&gt;</span></pre>
+
+<p>To save a little bit of space in what's already an enormous article, I'll spare you the explanation of how MacroDef works. If you really want to know, <a href="http://ant.apache.org/manual/Tasks/macrodef.html">read the docs!</a></p>
+
+<p>Suffice it to say, we now have a <code class="prettyprint"><span class="tag">&lt;handlebars&gt;&lt;/handlebars&gt;</span></code> task we can call! Let's use it to create a <code class="prettyprint"><span class="pln">compile</span><span class="pun">-</span><span class="pln">templates</span></code> target, and make our <code class="prettyprint"><span class="pln">prepare</span></code> target depend on <code class="prettyprint"><span class="pln">compile</span><span class="pun">-</span><span class="pln">templates</span></code>:</p>
+
+<pre class="prettyprint"><span class="tag">&lt;project</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"your_app"</span><span class="pln"> </span><span class="atn">default</span><span class="pun">=</span><span class="atv">"package"</span><span class="pln"> </span><span class="atn">basedir</span><span class="pun">=</span><span class="atv">"."</span><span class="tag">&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;target</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"package"</span><span class="pln"> </span><span class="atn">depends</span><span class="pun">=</span><span class="atv">"prepare"</span><span class="tag">&gt;&lt;/target&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;target</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"prepare"</span><span class="pln"> </span><span class="atn">depends</span><span class="pun">=</span><span class="atv">"compile-templates"</span><span class="tag">&gt;</span><span class="pln">
+
+        </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">file</span><span class="pun">=</span><span class="atv">"build.properties"</span><span class="tag">/&gt;</span><span class="pln">
+        </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">file</span><span class="pun">=</span><span class="atv">"local.properties"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+        </span><span class="tag">&lt;property</span><span class="pln"> </span><span class="atn">file</span><span class="pun">=</span><span class="atv">"secrets.properties"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+
+        </span><span class="com">&lt;!-- skipping most filter definitions for brevity --&gt;</span><span class="pln">
+        </span><span class="tag">&lt;filter</span><span class="pln"> </span><span class="atn">token</span><span class="pun">=</span><span class="atv">"API_BASE"</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${api.baseurl}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+
+        </span><span class="tag">&lt;delete</span><span class="pln"> </span><span class="atn">includeemptydirs</span><span class="pun">=</span><span class="atv">"true"</span><span class="pln"> </span><span class="atn">verbose</span><span class="pun">=</span><span class="atv">"false"</span><span class="tag">&gt;</span><span class="pln">
+            </span><span class="tag">&lt;fileset</span><span class="pln"> </span><span class="atn">dir</span><span class="pun">=</span><span class="atv">"${dir.pkg.tmp}"</span><span class="pln"> </span><span class="atn">includes</span><span class="pun">=</span><span class="atv">"**/*"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+        </span><span class="tag">&lt;/delete&gt;</span><span class="pln">
+
+        </span><span class="tag">&lt;copy</span><span class="pln"> </span><span class="atn">todir</span><span class="pun">=</span><span class="atv">"${dir.pkg.tmp}"</span><span class="pln"> </span><span class="atn">verbose</span><span class="pun">=</span><span class="atv">"false"</span><span class="pln"> </span><span class="atn">overwrite</span><span class="pun">=</span><span class="atv">"true"</span><span class="pln"> </span><span class="atn">filtering</span><span class="pun">=</span><span class="atv">"true"</span><span class="tag">&gt;</span><span class="pln">
+            </span><span class="tag">&lt;fileset</span><span class="pln"> </span><span class="atn">dir</span><span class="pun">=</span><span class="atv">"${dir.src}"</span><span class="pln"> </span><span class="atn">includes</span><span class="pun">=</span><span class="atv">"**/*"</span><span class="tag">&gt;</span><span class="pln">
+                </span><span class="com">&lt;!-- excludes ... erm... excluded for brevity --&gt;</span><span class="pln">
+            </span><span class="tag">&lt;/fileset&gt;</span><span class="pln">
+        </span><span class="tag">&lt;/copy&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;/target&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;target</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"compile-templates"</span><span class="tag">&gt;</span><span class="pln">
+
+        </span><span class="tag">&lt;handlebars</span><span class="pln"> </span><span class="atn">outfile</span><span class="pun">=</span><span class="atv">"assets/js/templates.min.js"</span><span class="tag">&gt;</span><span class="pln">
+            </span><span class="tag">&lt;args&gt;</span><span class="pln">
+                </span><span class="tag">&lt;arg</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"--min"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+                </span><span class="tag">&lt;arg</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"${dir.templates}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+            </span><span class="tag">&lt;/args&gt;</span><span class="pln">
+        </span><span class="tag">&lt;/handlebars&gt;</span><span class="pln">
+
+        </span><span class="tag">&lt;echo</span><span class="pln"> </span><span class="atn">message</span><span class="pun">=</span><span class="atv">"handlebars template compilation complete"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;/target&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;macrodef</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"handlebars"</span><span class="tag">&gt;</span><span class="pln">
+        </span><span class="tag">&lt;attribute</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"dir"</span><span class="pln"> </span><span class="atn">default</span><span class="pun">=</span><span class="atv">""</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+        </span><span class="tag">&lt;attribute</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"outfile"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+        </span><span class="tag">&lt;element</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"args"</span><span class="pln"> </span><span class="atn">optional</span><span class="pun">=</span><span class="atv">"true"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+        </span><span class="tag">&lt;sequential&gt;</span><span class="pln">
+            </span><span class="tag">&lt;exec</span><span class="pln"> </span><span class="atn">executable</span><span class="pun">=</span><span class="atv">"handlebars"</span><span class="pln">
+                </span><span class="atn">dir</span><span class="pun">=</span><span class="atv">"@{dir}"</span><span class="pln">
+                </span><span class="atn">output</span><span class="pun">=</span><span class="atv">"@{outfile}"</span><span class="pln">
+                </span><span class="atn">logError</span><span class="pun">=</span><span class="atv">"true"</span><span class="pln">
+                </span><span class="atn">failonerror</span><span class="pun">=</span><span class="atv">"true"</span><span class="tag">&gt;</span><span class="pln">
+                    </span><span class="tag">&lt;args</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+            </span><span class="tag">&lt;/exec&gt;</span><span class="pln">
+        </span><span class="tag">&lt;/sequential&gt;</span><span class="pln">
+    </span><span class="tag">&lt;/macrodef&gt;</span><span class="pln">
+
+</span><span class="tag">&lt;/project&gt;</span></pre>
+
+<p>Now, when I run <code class="prettyprint"><span class="pln">ant </span><span class="kwd">package</span></code> (or just <code class="prettyprint"><span class="pln">ant</span></code>, because <code class="prettyprint"><span class="kwd">package</span></code> is the default target), first <code class="prettyprint"><span class="pln">compile</span><span class="pun">-</span><span class="pln">templates</span></code> runs. If it's successful, <code class="prettyprint"><span class="pln">prepare</span></code> runs. Finally, if there were no errors in the previous two steps, <code class="prettyprint"><span class="kwd">package</span></code> itself actually runs.</p>
+
+<p>But what does the <code class="prettyprint"><span class="kwd">package</span></code> target actually do? Zip the files, of course!</p>
+
+<h3>Zip Creation (Really!)</h3>
+
+<p>Personally, I like to name my built zips very descriptively. I include the build number (which is auto-incremented every time I run this script), the version of PhoneGap I'm using, and a timestamp. After the zip file is created, we clean out the temp directory so that it doesn't clutter up developer workspace.</p>
+
+<pre class="prettyprint"><span class="tag">&lt;target</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"package"</span><span class="pln"> </span><span class="atn">depends</span><span class="pun">=</span><span class="atv">"prepare"</span><span class="tag">&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;tstamp&gt;</span><span class="pln">
+        </span><span class="tag">&lt;format</span><span class="pln"> </span><span class="atn">property</span><span class="pun">=</span><span class="atv">"build.tstamp"</span><span class="pln"> </span><span class="atn">pattern</span><span class="pun">=</span><span class="atv">"yyyy-MM-dd__HH-mm-ss"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+    </span><span class="tag">&lt;/tstamp&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;zip</span><span class="pln"> </span><span class="atn">destfile</span><span class="pun">=</span><span class="atv">"${dir.pkg.bin}BUILD${version.build.number}__PhoneGap${phonegap.version}__${build.tstamp}.zip"</span><span class="tag">&gt;</span><span class="pln">
+        </span><span class="tag">&lt;zipfileset</span><span class="pln"> </span><span class="atn">dir</span><span class="pun">=</span><span class="atv">"${dir.pkg.tmp}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+    </span><span class="tag">&lt;/zip&gt;</span><span class="pln">
+
+    </span><span class="tag">&lt;delete</span><span class="pln"> </span><span class="atn">includeemptydirs</span><span class="pun">=</span><span class="atv">"true"</span><span class="pln"> </span><span class="atn">verbose</span><span class="pun">=</span><span class="atv">"false"</span><span class="tag">&gt;</span><span class="pln">
+        </span><span class="tag">&lt;fileset</span><span class="pln"> </span><span class="atn">dir</span><span class="pun">=</span><span class="atv">"${dir.pkg.tmp}"</span><span class="pln"> </span><span class="atn">includes</span><span class="pun">=</span><span class="atv">"**/*"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+    </span><span class="tag">&lt;/delete&gt;</span><span class="pln">
+
+</span><span class="tag">&lt;/target&gt;</span></pre>
+
+<p>Instead of planting a somewhat enormous paste of the entire composed build script here, I'll push that out into a gist: <a href="https://gist.github.com/atuttle/6254915">https://gist.github.com/atuttle/6254915</a></p>
+
+<h3>One More Fun Thing</h3>
+
+<p>I often find myself double-checking that the version displayed on PGB's dashboard corresponds to my latest build number. ("Did I already upload the build?") This actually screams to automate the upload step too, but as I said at the top of this article, I've not gotten that far yet.</p>
+
+<p>For a while I was simply echoing out the build number during the package step:</p>
+
+<pre class="prettyprint"><span class="tag">&lt;echo</span><span class="pln"> </span><span class="atn">message</span><span class="pun">=</span><span class="atv">"BUILD NUMBER: ${build.number}"</span><span class="pln"> </span><span class="tag">/&gt;</span></pre>
+
+<p>But I found this to be slightly tedious and hard on the eyes. Seriously.</p>
+
+<p>POP QUIZ, HOT SHOT! What's the build number?</p>
+
+<p><a href="http://fusiongrokker.com/assets/content/2013/08/build_number_A.png" title="lightbox caption"><img src="http://fusiongrokker.com/assets/content/2013/08/build_number_A.png" alt="Hint: 245"></a></p>
+
+<p>Want to try again?</p>
+
+<p><a href="http://fusiongrokker.com/assets/content/2013/08/build_number_B.png" title="another lightbox caption"><img src="http://fusiongrokker.com/assets/content/2013/08/build_number_B.png" alt="Do you even need the hint this time?"></a></p>
+
+<p>I know, it's kind of dumb. But honestly, it saves me half a second for almost every build, and you can see that I've made quite a few of them. It's a half second I don't have to spend straining my eyes, and it's slightly amusing, in an immature way. So how do we pull it off? Well, there are lots of different ways. Basically it's just another command line program I'm calling that takes a string as input and spits out ascii art. In this case, <a href="http://en.wikipedia.org/wiki/FIGlet">figlet</a>.</p>
+
+<p>Here's my macrodef:</p>
+
+<pre class="prettyprint"><span class="tag">&lt;macrodef</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"figlet"</span><span class="tag">&gt;</span><span class="pln">
+    </span><span class="tag">&lt;attribute</span><span class="pln"> </span><span class="atn">name</span><span class="pun">=</span><span class="atv">"text"</span><span class="pln"> </span><span class="atn">default</span><span class="pun">=</span><span class="atv">""</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+    </span><span class="tag">&lt;sequential&gt;</span><span class="pln">
+        </span><span class="tag">&lt;exec</span><span class="pln"> </span><span class="atn">executable</span><span class="pun">=</span><span class="atv">"figlet"</span><span class="tag">&gt;</span><span class="pln">
+            </span><span class="tag">&lt;arg</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"-c"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+            </span><span class="tag">&lt;arg</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"-f"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+            </span><span class="tag">&lt;arg</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"roman"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+            </span><span class="tag">&lt;arg</span><span class="pln"> </span><span class="atn">value</span><span class="pun">=</span><span class="atv">"@{text}"</span><span class="pln"> </span><span class="tag">/&gt;</span><span class="pln">
+        </span><span class="tag">&lt;/exec&gt;</span><span class="pln">
+    </span><span class="tag">&lt;/sequential&gt;</span><span class="pln">
+</span><span class="tag">&lt;/macrodef&gt;</span></pre>
+
+<p>And instead of the <code class="prettyprint"><span class="tag">&lt;echo&gt;</span></code> line above, we call it like this:</p>
+
+<pre class="prettyprint"><span class="tag">&lt;figlet</span><span class="pln"> </span><span class="atn">text</span><span class="pun">=</span><span class="atv">"${version.build.number}"</span><span class="pln"> </span><span class="tag">/&gt;</span></pre>
+
+<h3>More?</h3>
+
+<p>I do have a few more odds and ends that I include in my build scripts for rounding off the rough edges of repetitive tasks, but I figure this is enough for one day. If there's interest, I can always write those extra bits up as another article.</p>
+
+<p>Do you have any ideas to further improve the process I've described, here?</p>
+
+					<p class="well">
+						Published 2013-08-17 @ 08:15 in
+						<span class="tag-icon"><i class="icon icon-tags"></i></span>
+						<a href="/archives/category/phonegap" title="View all posts in: PhoneGap" rel="category tag">PhoneGap</a>
+					</p>
+
+					</div> <!--/post -->
+					<div id="disqus_thread"></div>
+
+				</div>
+			</div>
+
+			<footer class="row">
+				<div class="col-md-12">
+					<p>
+						&copy; Copyright 2013 <a href="http://fusiongrokker.com">Adam Tuttle</a>.
+						Built with <a href="http://www.getbootstrap.com">Bootstrap</a>.
+						Fonts from <a href="http://typekit.com">Typekit</a>.
+						Theme inspired by <a href="http://git-scm.com/book">Pro Git</a>.
+					</p>
+				</div>
+			</footer>
+		</div>
+
+		<script src="assets/js/bundle.min.js"></script>
+		<!--DISQUS-->
+		<script>
+			var disqus_shortname = 'fusiongrokker'; // Required - Replace example with your forum shortname
+			// var disqus_identifier = '';
+			var disqus_title = 'disqus_title';
+
+			(function() {
+				var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+				dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+				(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+			})();
+		</script>
+	</body>
+</html>
