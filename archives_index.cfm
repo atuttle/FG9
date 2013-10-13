@@ -33,9 +33,9 @@
 						<cfloop list="#variables.monthList#" index="m">
 							<cfif structKeyExists(variables.archivesActive, y) and arrayFindNoCase(variables.archivesActive[y], m)>
 								<cfset link = dateformat(parseDateTime(m & ' 01 ' & y), "YYYY/MM/")/>
-								<td><a class="btn btn-success" href="/archives/date/#variables.link#">#m#</a></td>
+								<td><a class="btn btn-success archiveMonth" href="/archives/date/#variables.link#">#m#</a></td>
 							<cfelse>
-								<td><a class="btn btn-warning disabled" disabled="disabled">#m#</a></td>
+								<td><a class="btn disabled archiveMonth" disabled="disabled">#m#</a></td>
 							</cfif>
 						</cfloop>
 					</tr>
@@ -43,10 +43,11 @@
 			</cfoutput>
 		</table>
 
+		<br/>
 		<h1>By Topic, Tag Cloud:</h1>
 		<mangox:categorycloud />
 
-
+		<br/><br/>
 		<h1>By Topic, Alphabetical:</h1>
 		<div id="archiveTopics">
 			<mango:Categories>
