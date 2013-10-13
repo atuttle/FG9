@@ -125,22 +125,6 @@
 		</div>
 
 		<script src="#variables.jsUrl#/bundle.min.js"></script>
-		<cfparam name="attributes.disqus" default="false" />
-		<cfparam name="attributes.disqus_identifier" default="" />
-		<cfparam name="attributes.disqus_title" default="" />
-		<cfif attributes.disqus>
-			<!--DISQUS-->
-			<script>
-				var disqus_shortname = 'fusiongrokker'; // Required - Replace example with your forum shortname
-				var disqus_identifier = '#attributes.disqus_identifier#';
-				var disqus_title = '#attributes.disqus_title#';
-				(function() {
-					var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-					dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-					(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-				})();
-			</script>
-		</cfif>
 	</body>
 </html>
 </cfoutput>

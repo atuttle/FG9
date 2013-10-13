@@ -13,13 +13,23 @@
 					<mango:PostProperty ifNotHasExcerpt body />
 					<mango:Event name="beforePostContentEnd" template="index" mode="excerpt" />
 					<p class="well postMeta">
-						Published <cfoutput>#variables.postDate#</cfoutput> in
-						<mango:Categories>
-							<mango:Category>
-								<span class="tag-icon"><i class="icon icon-tags"></i></span>
-								<a href="<mango:CategoryProperty link />" title="View all posts in: <mango:CategoryProperty title />" rel="category tag"><mango:CategoryProperty title /></a>
-							</mango:Category>
-						</mango:Categories>
+						<span class="responseCount">
+							<i class="icon icon-comments"></i>
+							<a href="<mango:PostProperty link />#comments" title="Comments for: <mango:PostProperty title />"
+							><mango:PostProperty ifCommentCountGT="0">
+								<mango:PostProperty commentCount /> Response<mango:PostProperty ifCommentCountGT="1">s</mango:PostProperty
+								></mango:PostProperty
+							><mango:PostProperty ifCommentCountLT="1">No Responses Yet</mango:PostProperty></a>
+						</span>
+						<span class="byline">
+							<cfoutput>#variables.postDate#</cfoutput> in
+							<mango:Categories>
+								<mango:Category>
+									<span class="tag-icon"><i class="icon icon-tags"></i></span>
+									<a href="<mango:CategoryProperty link />" title="View all posts in: <mango:CategoryProperty title />" rel="category tag"><mango:CategoryProperty title /></a>
+								</mango:Category>
+							</mango:Categories>
+						</span>
 					</p>
 				</div><!-- /post -->
 			</mango:Post>

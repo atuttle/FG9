@@ -212,6 +212,46 @@ code span {
 
 	.postMeta {
 		margin-bottom: 50px;
+
+		.responseCount {
+			float: right;
+		}
+		.icon {
+			color: #aaa;
+		}
+	}
+
+	.author {
+		background-color: #dff0d8;
+		border-color: #d6e9c6;
+	}
+
+	.comment {
+		.commentBody {
+			margin-left: 70px;
+		}
+		.by {
+			margin-top: -8px;
+		}
+		.gravatar {
+			left: -70px;
+			position: relative;
+		}
+		h4 {
+			margin-top: -60px;
+		}
+	}
+	#respond {
+		.commentField {
+			width: 50%;
+		}
+		.extra {
+			padding: 0;
+			margin-top: -40px;
+		}
+	}
+	#gravatar_preview {
+		margin: 0;
 	}
 }
 
@@ -283,6 +323,15 @@ footer {
 	}
 	.post code {
 		word-wrap: break-word !important;
+	}
+	.postMeta {
+		.byline {
+			display: block;
+		}
+		.responseCount {
+			display: block;
+			float: none !important;
+		}
 	}
 }
 
