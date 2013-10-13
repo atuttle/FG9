@@ -1,14 +1,25 @@
-# FG8
+# FG9
 
 This is a [Mango Blog](http://www.mangoblog.org) theme I've developed for use at [FusionGrokker.com](http://fusiongrokker.com).
 
 I publish my themes as open source so that others can benefit from them, learning how best to develop their own themes using the Mango custom tag system. All of my themes are "pod-enabled," because pods are awesome.
 
-This particular theme is built using Twitter Bootstrap, and is based on the [Superhero theme](http://bootswatch.com/superhero/) available at [Bootswatch](http://bootswatch.com/).
+This particular theme is built using [Bootstrap 3](http://www.getbootstrap.com), and is heavily inspired by the design of the [Pro Git Book Website](http://git-scm.com/book). It uses commercial fonts from [TypeKit](http://typekit.com/) (free for Creative Cloud members).
+
+The theme features:
+
+* Responsive design so it works great on mobile devices of all sizes
+* Parallax scrolling effect for header background graphic
+* Easily swap out the header background graphic without any Photoshop/etc work
+* Author comment styling
+* Gravatar previews
+* Lightbox effect
+* Language-agnostic code [syntax highlighting](https://code.google.com/p/google-code-prettify/); currently using the "GitHub" syntax theme but it's [easily changed](http://jmblog.github.io/color-themes-for-google-code-prettify/). No need for a syntax highlighting plugin.
+* `<pre></pre>` blocks scroll horizontally if needed, while `<code></code>` blocks wrap as needed on smaller screens
 
 ## Compiling JS and CSS
 
-I use [CodeKit](http://incident57.com/codekit/) to continuously recompile my LESS-CSS and JavaScript changes; but there's nothing preventing you from using a different build system. `assets/css/combined.css` is built from `assets/less/combined.less`, which itself simply imports other resources.
+I use [CodeKit](http://incident57.com/codekit/) to continuously recompile my LESS-CSS and JavaScript changes; but there's nothing preventing you from using a different build system. `assets/css/bundle.css` is built from `assets/less/bundle.less`, which itself simply imports other resources.
 
 ## Open Source License
 
