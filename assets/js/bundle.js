@@ -26,4 +26,14 @@ $(function(){
 		$(this).closest('a').attr('data-lightbox', 'lightbox');
 	});
 
+	//gravatar previews
+	$("#respond input[name=comment_email]").blur(function(){
+		var e = hex_md5(
+			$(this).val().toLowerCase()
+		),
+		t = "http://www.gravatar.com/avatar/"+e+"?s=100";
+		$("#gravatar_preview").empty().append("<em>Gravatar preview:</em><br/><img src='"+t+"' />");
+	});
+
+
 });
