@@ -99,9 +99,9 @@
 							</mango:AuthenticatedAuthor>
 							<mango:AuthenticatedAuthor ifNotIsLoggedIn>
 								<p id="gravatar_preview" class="pull-right"></p>
-								<p><input name="comment_name" class="input-lg commentField" value="" type="text" placeholder="Name (required)" /></p>
-								<p><input name="comment_email" class="input-lg commentField" value="" type="email" placeholder="Email (required, not published)" /></p>
-								<p><input name="comment_website" class="input-lg commentField" value="" type="url" placeholder="Website (optional, published)" /></p>
+								<p><input name="comment_name" class="input-lg commentField" value="<mango:RequestVar name="comment_name" />" type="text" placeholder="Name (required)" /></p>
+								<p><input name="comment_email" class="input-lg commentField" value="<mango:RequestVar name="comment_email" />" type="email" placeholder="Email (required, not published)" /></p>
+								<p><input name="comment_website" class="input-lg commentField" value="<mango:RequestVar name="comment_website" />" type="url" placeholder="Website (optional, published)" /></p>
 							</mango:AuthenticatedAuthor>
 							<p><textarea name="comment_content" class="form-control input-lg" rows="10" placeholder="Your Comment"></textarea></p>
 							<p><label><input id="subscribe" name="comment_subscribe" value="1" type="checkbox"> Email me when others comment</label></p>
