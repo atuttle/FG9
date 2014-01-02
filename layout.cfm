@@ -115,7 +115,7 @@
 			<footer class="row">
 				<div class="col-md-12">
 					<p>
-						&copy; Copyright 2013 <a href="http://fusiongrokker.com">Adam Tuttle</a>.
+						&copy; Copyright #year(now())# <a href="http://fusiongrokker.com">Adam Tuttle</a>.
 						Built with <a href="http://www.getbootstrap.com">Bootstrap</a>.
 						Fonts from <a href="http://typekit.com">Typekit</a>.
 						Theme inspired by <a href="http://git-scm.com/book">Pro Git</a>.
