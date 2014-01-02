@@ -125,6 +125,7 @@
 		</div>
 
 		<script src="#variables.jsUrl#/bundle.min.js"></script>
+		<cfinclude template="ga.cfm" />
 	</body>
 </html>
 </cfoutput>
